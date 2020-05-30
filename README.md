@@ -1,2 +1,2 @@
 # PyDB
-A Teaching Database System Implement in Python
+A Teaching Database System Implemented in Python.
