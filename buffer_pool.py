@@ -23,7 +23,7 @@ class Fields:
 		self.field_name=[]
 		self.field_count=0
 		self.type=''  # INT_TYPE or STRING_TYPE
-
+	'''field set up'''
 	def set_fields(self):
 		self.type=input("field type, INT_TYPE or STRING_TYPE:",)
 		if self.type!='INT_TYPE' and self.type!='STRING_TYPE':
@@ -38,7 +38,7 @@ class Fields:
 			if temp == '':
 				break
 			self.field_name.append(temp)
-
+	'''get the type of field'''
 	def get_ftype(self):
 		return self.type
 
@@ -50,22 +50,20 @@ class Tuple:
 		self.tuple_fields=''
 		self.tuple_tid=0
 		self.tuple_Rid=[0,0]  # (PageID,slotNum)
-		# self.tuple_data.append(self.tuple_Rid)
-		# self.tuple_data.append(self.tuple_fields)
-
+	'''inout information to field'''
 	def fulfill_info(self):
 		# input new tuple value
 		for i in range(0,self.tuple_colnum):
 			tempval=input("Fieldname--"+self.tuple_fields.field_name[i]+":",)
 			self.tuple_data.append(tempval)
-
+	'''set the field for the tuple'''
 	def set_field(self,Fields):
 		self.tuple_colnum=len(Fields.field_name)
 		self.tuple_fields=Fields
 		# count++
 		Fields.field_count+=1
 		self.tuple_tid=Fields.field_count
-
+	'''get the field of a tuple'''
 	def get_Field(self):
 		return self.tuple_fields
 
@@ -80,13 +78,12 @@ class page_file:													# 1heap files contains many pages or only page?
 	# structure of page_file: [slotnum,[tuple1],[tuple2],..,[tupleN]]
 	def __init__(self):
 		self.page_id=''
-		# self.page_type='int'# how to decide?
 		self.page_data=[]  # normal data
 		self.page_bytesarrays=[]  # bytes arrays
 		self.page_size=PAGE_SIZE
 		self.page_slotnum=0
 		self.page_num=0  # num in heap file
-
+	'''get the id of a page'''
 	def get_id(self,fileNAME):
 		""" get the id of this page
 		"""
@@ -94,7 +91,7 @@ class page_file:													# 1heap files contains many pages or only page?
 		startp=tempid.rfind("0x")
 		self.page_id=tempid[startp:-1] # -hash(tempid[startp:-1])  # hash the file's id
 		return self.page_id  #string of page id
-
+	'''get the page_data in a page'''
 	def get_page_data(self,fileNAME):
 		""" return the byte array data contained in this page
 		"""
@@ -109,7 +106,7 @@ class page_file:													# 1heap files contains many pages or only page?
 			print("empty file")
 		f.close()
 		return self.page_bytesarrays  # return the byte arrays
-
+	''' insert a tuple to file_page'''
 	def insert_tuple(self,Tuple):
 		""" adds the specified tuple to this page
 		"""
@@ -122,11 +119,9 @@ class page_file:													# 1heap files contains many pages or only page?
 			# change the tuple_Rid to (PageId, slotnum)
 			Tuple.tuple_Rid[0]=self.page_id
 			Tuple.tuple_Rid[1]=self.page_slotnum
-			#Tuple.tuple_data[0][0]=self.page_id
-			#Tuple.tuple_data[0][1]=self.page_slotnum
 			self.page_data.append(Tuple)							#2:how to convert to binary?
 		return 0
-
+	'''insert a tuple to a file according to filename'''
 	def insert_tupletofile(self,Tuple,fileNAME):
 		# write into the file
 		f = open(fileNAME, 'r+b')
@@ -146,18 +141,16 @@ class page_file:													# 1heap files contains many pages or only page?
 			f.seek(0)
 			f.truncate()
 			pickle.dump(temp, f)#change the content of slot count
-			#f.close()
-			#f = open(fileNAME, 'a+b')
 			pickle.dump(Tuple, f) #convert the data to byte arrays
 			f.close()
 		return 0
-
+	'''print the content in page'''
 	def print_for_bugs(self):
 		print("pageid:",self.page_id)
 		print("pagedata",self.page_data)
 		print("pagebytesarrays:",self.page_bytesarrays)
 		return 0
-
+# create an  overflow page
 def Overflow_page(Tuple):
 	newpf=page_file()
 	Tuple.tuple_Rid[0]=newpf.page_id
@@ -174,13 +167,11 @@ class buffer_pool:
 		for i in range(0,self.MAX_PAGES):
 			self.pool_pages.append(page_file())
 		self.pool_num=0
-	
+	'''delete the tuple in buffer pool according to tuple id, and store the deleted one in t'''
 	def delete_tuple(self,tid, t):													#tuple id or record id?
-		#tid=tuple _Rid
-		#tPage_id=tid[0]
-		#tSlotnum=tid[1]#start from 1, as pages[0]stands for slot num
+		# tid=tuple _Rid
 		for i in range(0,self.pool_num):
-			#tid == tuple id
+			# tid == tuple id
 			for j in range(0,self.pool_pages[i].page_slotnum):
 				print("DEBUG",tid,self.pool_pages[i].page_data[j].tuple_tid)
 				if self.pool_pages[i].page_data[j].tuple_tid==tid:
@@ -188,7 +179,7 @@ class buffer_pool:
 					self.pool_pages[i].page_data[j]=[]
 					s="tuple with ID:"+str(tid)+" delete successfully"
 					return s
-			#if tid stands for tuple Rid
+			# if tid stands for tuple Rid
 			'''
 			if self.pool_pages[i].page_id==tPage_id:
 				#search in this page
@@ -196,22 +187,22 @@ class buffer_pool:
 				self.pool_pages[i].page_data[tSlotnum]=[]#delete the target tuple
 				return t
 			'''
-		#tid == tuple id
+		# tid == tuple id
 		return "tuple not found"
-
+	'''discard the page file from the buffer according to page id'''
 	def discard_page(self,pid):
 		for i in range(0,self.pool_num):
 			if self.pool_pages[i].page_id==pid:
-				#discard page from buffer by freeing the space of pages[i]
+				# discard page from buffer by freeing the space of pages[i]
 				self.pool_pages[i]=page_file()
 				return "page discard successfully!"
 		return "page not found"
-
+	'''get the page file from the buffer according to page id(pid)'''
 	def get_page(self,pid):											#4from the buffer?
 		output=page_file()
 		for i in range(0,self.pool_num):
 			if self.pool_pages[i].page_id==pid:
-				#get the page
+				# get the page
 				output = self.pool_pages[i]
 				return output
 		return "page not found"
