@@ -1,5 +1,5 @@
 import unittest
-from buffer_pool_edited import *
+from buffer_pool import *
 
 class BufferPoolTest(unittest.TestCase):
 
@@ -48,7 +48,7 @@ class BufferPoolTest(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()
     suite = unittest.TestSuite()
-    tests = Testbuffer_pool("test_Buffer_Pool")
+    tests = BufferPoolTest("test_Buffer_Pool")
     suite.addTests(tests)
 
     runner = unittest.TextTestRunner(verbosity=2)
