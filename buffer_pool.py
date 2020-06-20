@@ -16,28 +16,28 @@ LEN_Int = 4  # bytes of int, static
 PAGE_ID = 0  # unique id for each page
 StringLength = LEN_String  # length of string in tuple
 
-# convertion between int and bytes, note int = 8 bytes
 def int_to_bytes(x: int) -> bytes:
+	'''convertion between int and bytes, note int = 8 bytes'''
 	return struct.pack('i',x)
-	#return x.to_bytes((x.bit_length() + 7) // 8, 'big')
 
 def int_from_bytes(xbytes):
 	temp=struct.unpack('i',xbytes)[0]
 	return temp
 
-# convertion between string ending with ' ' to int
 def int_from_string(string):
+	'''convertion between string ending with ' ' to int'''
 	return int(string[0:string.find(' ')])
 
-# get size of file
 def getSize(fileobject):
+	'''get size of file'''
 	fileobject.seek(0,2)  # move the cursor to the end of the file
 	size = fileobject.tell()
 	return size
 
 class Fields:
-	" initialize fields class with name, count, type "
+
 	def __init__(self):
+		" initialize fields class with name, count, type "
 		self.field_name=None
 		self.field_cols=[]  # name of each col
 		# self.field_count=0  # 8 bytes
@@ -45,8 +45,9 @@ class Fields:
 		# structure: name+type+count+colnames
 		self.field_size=0  # size of the field
 		self.field_bytesdata=None  # bytes data of field
-	'''field set up'''
+
 	def set_fields(self,Inputtype,Inputname,Inputcols):
+		'''field set up'''
 		# for size limitation
 		try:
 			temp=create_string_buffer(LEN_String)
@@ -62,11 +63,13 @@ class Fields:
 		for i in range(0,len(Inputcols)):
 			self.field_cols.append(Inputcols[i].ljust(LEN_String," "))  # name of each col
 		self.field_size=(2+len(Inputcols))*LEN_String # name+type+colnames+count
-	'''get the type of field'''
+
 	def get_ftype(self):
+		'''get the type of field'''
 		return self.type
-	'''return the bytes array of fields'''
+
 	def serialize(self):
+		'''return the bytes array of fields'''
 		# structure: name+type+colnames
 		self.field_bytesdata=create_string_buffer(self.field_size)
 		tempname=create_string_buffer(LEN_String)
@@ -83,8 +86,9 @@ class Fields:
 			temp+=tempcolname.raw
 		self.field_bytesdata.raw=tempname.raw+temptype.raw+temp
 		return self.field_bytesdata
-	'''return the field object from bytes array'''
+
 	def deserialize(self,bytesarray):
+		'''return the field object from bytes array'''
 		# structure: name+type+count+colnames
 		self.field_size=sizeof(bytesarray)
 
@@ -100,39 +104,38 @@ class Fields:
 class Tuple:
 	# structure of tuple_data:[col1,col2,...,colN]
 	def __init__(self):
-		self.tuple_colnum=0
+		self.tuple_column=0
 		self.tuple_fields=Fields()
 		self.tuple_data=None
 		self.tuple_tid=0      # tuple ID in each field
 		self.tuple_Rid=[0,0]  # (PageID,slotNum)
 		# structure: tid+Rid+field+data
-		self.tuple_colnum=0
+		self.tuple_column=0
 		self.tuple_size=0  # size of tuple
 		self.tuple_bytesdata=None  # bytes array of tuple
 
-	'''set the field for the tuple'''
 	def set_field(self,Fields):
-		self.tuple_colnum=len(Fields.field_cols)
+		'''set the field for the tuple'''
+		self.tuple_column=len(Fields.field_cols)
 		self.tuple_fields=Fields
 		# data depends on type of fields
 		if Fields.type!='int'.ljust(LEN_String," ") and Fields.type!='str'.ljust(LEN_String," "):
 			print(Fields.type,"TYPE ERROR: only INT_TYPE and STRING_TYPE are allowed")
 			return 0
 
-	'''get the field of a tuple'''
 	def get_Field(self):
+		'''get the field of a tuple'''
 		return self.tuple_fields
 
-	'''input information to field'''
 	def fulfill_info(self,Listofdata):
+		'''input information to field'''
 		# input new tuple value
-
 		# type of input
 		if type(Listofdata[0])==int:temptype='int'.ljust(LEN_String," ")
 		elif type(Listofdata[0])==str:temptype='str'.ljust(LEN_String," ")  # have to
 		else: temptype=None
 
-		if len(Listofdata)>self.tuple_colnum:
+		if len(Listofdata)>self.tuple_column:
 			print("column number out of range")
 			return 0
 		elif temptype!=self.tuple_fields.type:
@@ -142,38 +145,39 @@ class Tuple:
 			self.tuple_data=Listofdata
 			return 1
 
-	'''output tuple_data and fields_data to string'''
 	def toString(self):
+		'''output tuple_data and fields_data to string'''
 		tupleid=0
 		temp=str(self.tuple_tid)+str(self.tuple_Rid)+\
 			str(self.tuple_data)  # string of tuple data
 		temp+=str(self.tuple_fields.field_name)+\
 			 str(self.tuple_fields.type)+str(self.tuple_fields.field_cols)  # string of Fields
 		return temp
-	'''return the bytes array of the tuple'''
+
 	def serialize(self):
+		'''return the bytes array of the tuple'''
 		# structure: tid+Rid+field+data
 		temptid=create_string_buffer(LEN_Int)
 		temptid.raw=int_to_bytes(self.tuple_tid)
-		# temptid.value=str(self.tuple_tid).ljust(LEN_String," ").encode()
+
 		tempRid=create_string_buffer(LEN_Int*2)
 		tempRid.raw=int_to_bytes(self.tuple_Rid[0])+int_to_bytes(self.tuple_Rid[1])
-		# tempRid.value=str(self.tuple_Rid[0]).ljust(LEN_String," ").encode()+str(self.tuple_Rid[1]).ljust(LEN_String," ").encode()
+
 		tempfield=create_string_buffer(self.tuple_fields.field_size)
 		tempfield.raw=self.tuple_fields.serialize().raw
 		temptuple=b''
 		if self.tuple_fields.type=='int'.ljust(LEN_String," "):
 
 			tempdata=create_string_buffer(LEN_Int)
-			self.tuple_size=LEN_Int*3+self.tuple_fields.field_size+LEN_Int*self.tuple_colnum
-			for i in range(0,self.tuple_colnum):
+			self.tuple_size=LEN_Int*3+self.tuple_fields.field_size+LEN_Int*self.tuple_column
+			for i in range(0,self.tuple_column):
 				tempdata.raw=int_to_bytes(self.tuple_data[i])
 				temptuple+=tempdata.raw
 		elif self.tuple_fields.type=='str'.ljust(LEN_String," "):
 
 			tempdata=create_string_buffer(LEN_String)
-			self.tuple_size=LEN_Int*3+self.tuple_fields.field_size+LEN_String*self.tuple_colnum
-			for i in range(0,self.tuple_colnum):
+			self.tuple_size=LEN_Int*3+self.tuple_fields.field_size+LEN_String*self.tuple_column
+			for i in range(0,self.tuple_column):
 				tempdata.raw=self.tuple_data[i].ljust(LEN_String," ").encode()
 				temptuple+=tempdata
 		else:
@@ -182,8 +186,9 @@ class Tuple:
 		self.tuple_bytesdata=create_string_buffer(self.tuple_size)
 		self.tuple_bytesdata.raw=temptid.raw+tempRid.raw+tempfield.raw+temptuple
 		return self.tuple_bytesdata
-	'''return the tuple object from bytes array'''
+
 	def deserialize(self,bytesarray,fieldsize):
+		'''return the tuple object from bytes array'''
 		# structure: tid+Rid+field+data
 		self.tuple_size=sizeof(bytesarray)
 		stringinfo1=create_string_buffer(fieldsize)
@@ -204,11 +209,11 @@ class Tuple:
 		# data
 		self.tuple_data=[]
 		if self.tuple_fields.type=='int'.ljust(LEN_String," "):
-			for i in range(0,self.tuple_colnum):
+			for i in range(0,self.tuple_column):
 				tempdata=int_from_bytes(stringinfo2.raw[LEN_Int*i:LEN_Int*(1+i)])
 				self.tuple_data.append(tempdata)
 		elif self.tuple_fields.type=='str'.ljust(LEN_String," "):
-			for i in range(0,self.tuple_colnum):
+			for i in range(0,self.tuple_column):
 				tempdata=stringinfo2.raw[LEN_String*i:LEN_String*(1+i)].decode()
 				self.tuple_data.append(tempdata)
 		else:
@@ -228,13 +233,11 @@ class page_file:
 
 		self.page_tuples=[]  # tuple data
 
-	'''get the id of a page'''
 	def get_id(self):
 		""" get the id of this page
 		"""
 		return self.page_id  #string of page id
 
-	'''get the bytes page_data in a page'''
 	def get_page_data(self):
 		""" return the byte array data contained in this page
 		"""
@@ -261,8 +264,8 @@ class page_file:
 		self.page_bytesdata.raw=tempid.raw+tempnum.raw+temp1
 		return self.page_bytesdata  # return the byte arrays
 
-	''' deserialize the page_file from bytes array'''
 	def deserialize(self,bytesarray,fieldsize):
+		''' deserialize the page_file from bytes array'''
 		self.page_id=int_from_bytes(bytesarray.raw[0:LEN_Int])
 		self.page_slotnum=int_from_bytes(bytesarray.raw[LEN_Int:LEN_Int*2])
 
@@ -275,7 +278,6 @@ class page_file:
 
 		return 0
 
-	'''insert a tuple to file_page'''
 	def insert_tuple(self,Tuple):
 		""" adds the specified tuple to this page
 		"""
@@ -307,15 +309,15 @@ class page_file:
 			self.page_slotnum+=1
 		return 0
 
-	'''print the content in page'''
 	def print_for_bugs(self):
+		'''print the content in page'''
 		print("pageid:",self.page_id)
 		print("tuples in this page:",self.page_tuples)
 		print("bytesdata of the page:",self.page_bytesdata)
 		return 0
 
-# create an  overflow page, while insert returns 1
 def Overflow_page(Tuple):
+	'''create an  overflow page, while insert returns 1'''
 	newpf=page_file()
 	newpf.insert_tuple(Tuple)
 	return newpf
@@ -330,8 +332,8 @@ class buffer_pool:
 		self.pool_pages=[] #buffer pages, from 0-defaul_pages
 		self.pool_num=0
 
-	'''delete the tuple in buffer pool according to tuple id, and store the deleted one in t'''
 	def delete_tuple(self,tid, t):													#tuple id or record id?
+		'''delete the tuple in buffer pool according to tuple id, and store the deleted one in t'''
 		# tid=tuple _Rid
 		tPage_id=tid[0]
 		tSlotno=tid[1]  # start from 1
@@ -339,10 +341,9 @@ class buffer_pool:
 			try:
 				# tid == tuple Rid
 				if self.pool_pages[i].page_id==tPage_id:
-					#print(tPage_id,self.pool_pages[i].page_id)
 					#search in this page
 					t=self.pool_pages[i].page_tuples[tSlotno]
-					if not t.tuple_colnum:
+					if not t.tuple_column:
 						print("tuple not found")
 						return None
 					self.pool_pages[i].page_tuples[tSlotno]=None  # delete the target tuple
@@ -352,8 +353,9 @@ class buffer_pool:
 				continue
 		print("tuple not found")
 		return None
-	'''discard the page file from the buffer according to page id'''
+
 	def discard_page(self,pid):
+		'''discard the page file from the buffer according to page id'''
 		for i in range(0,self.DEFAULT_PAGES):
 			try:
 				if self.pool_pages[i].page_id==pid:
@@ -366,8 +368,9 @@ class buffer_pool:
 				continue
 		print("page not found")
 		return 0
-	'''get the bytes data of this buffer pool'''
+
 	def get_data(self):
+		'''get the bytes data of this buffer pool'''
 		self.pool_bytesdata=create_string_buffer(self.pool_size)
 		tempnum=create_string_buffer(8)
 		tempsize=create_string_buffer(8)
@@ -380,8 +383,9 @@ class buffer_pool:
 				emptypage=create_string_buffer(PAGE_SIZE)
 				self.pool_bytesdata+=emptypage.raw
 		return self.pool_bytesdata
-	'''get the page file from the buffer according to page id(pid)'''
+
 	def get_page(self,pid):
+		'''get the page file from the buffer according to page id(pid)'''
 		for i in range(0,self.DEFAULT_PAGES):
 			try:
 				if self.pool_pages[i].page_id==pid:
@@ -392,4 +396,3 @@ class buffer_pool:
 				continue
 		print("page not found")
 		return 0
-	'''read a new page to buffer pool from heap file'''
