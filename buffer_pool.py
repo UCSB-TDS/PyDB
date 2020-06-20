@@ -24,10 +24,6 @@ def int_from_bytes(xbytes):
 	temp=struct.unpack('i',xbytes)[0]
 	return temp
 
-def int_from_string(string):
-	'''convertion between string ending with ' ' to int'''
-	return int(string[0:string.find(' ')])
-
 def getSize(fileobject):
 	'''get size of file'''
 	fileobject.seek(0,2)  # move the cursor to the end of the file
