@@ -25,14 +25,9 @@ class buffer_pool:
 
 	def __init__(size):
 		pass
-	
+
 	def delete_tuple(tid, t):
 		pass
 
 	def discard_page(pid):
 		pass
-
-	
-	
-	
-	
