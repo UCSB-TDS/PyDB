@@ -30,6 +30,7 @@ class HeapFileTest(unittest.TestCase):
         heapfiletest.write_page(heappagetest2)
         heapfiletest.write_page(heappagetest3)
         heapfiletest.read_page(3).print_for_bugs()
+        heapfiletest.read_page(4)
         print("page index in the header of the heap file:",heapfiletest.header_index)
         heapfiletest.get_file()
 
