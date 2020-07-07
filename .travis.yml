@@ -1,13 +1,8 @@
 language: python
-python:
-  - "3.8"
-  - "pypy3"  # currently Python 3.6.1,  PyPy 7.1.1-beta0
-virtualenv:
-  system_site_packages: true
-# command to install dependencies
-install:
-  - pip install -r requirements.txt
-  - pip install .
-# command to run tests
-script:
-  - pytest
+
+matrix:
+  include:
+    - name: "Python 3.8 dev"
+      python: 3.8-dev
+      dist: xenial
+      env: PYTHON=python3 PIP=pip3  # Unnecessary on Lunix
