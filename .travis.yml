@@ -1,8 +1,8 @@
 language: python
-
-matrix:
-  include:
-    - name: "Python 3.8 dev"
-      python: 3.8-dev
-      dist: xenial
-      env: PYTHON=python3 PIP=pip3  # Unnecessary on Lunix
+python:
+  - "3.8"
+cache: pip
+install:
+  - pip install -r requirements.txt
+script:
+  - python heap_file_test.py
