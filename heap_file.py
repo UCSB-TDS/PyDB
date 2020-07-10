@@ -12,7 +12,7 @@ MAX_PAGES = (HEAPFILE_SIZE-MAX_HEADER_SIZE)//PAGE_SIZE
 
 LEN_String: int = 256  # bytes of constant string
 LEN_Int32 = 4  # bytes of int, static
-LEN_Type = 16  # stands for int32 or varchar(256)
+LEN_Type = 2  # stands for int32 or varchar(256)
 # note that int length also should be less than 8
 
 PAGE_ID = 0  # unique id for each page
