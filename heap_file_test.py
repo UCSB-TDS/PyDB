@@ -10,7 +10,7 @@ class HeapFileTest(unittest.TestCase):
         schematest1=Schema(inputdata=[('colname1','CHAR(255)'),('colname2','INT32')],relationname='test relation')
         print(schematest1.field_domain)
         bytestest1=schematest1.serialize()
-        print(schematest1.deserialize(bytestest1))
+        # print(schematest1.deserialize(bytestest1))
 
         '''test heap page'''
         heappagetest1=heap_page(schematest1)
