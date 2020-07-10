@@ -4,6 +4,7 @@ python:
 cache: pip
 install:
   - ls
+  - pip install msgpack-python
   - pip install -r requirements.txt
 script:
   - python heap_file_test.py
