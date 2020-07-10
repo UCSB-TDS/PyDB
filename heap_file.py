@@ -243,7 +243,7 @@ class heap_page:
         # structure of page_file: [header,[[tuple1],[tuple2],..,[tupleN]]]
         page_dict = msgpack.unpackb(msg_str, use_list=False)
         # header fulfil
-        tempheader=page_dict["header"]
+        tempheader=page_dict['header']
         self.page_id=tempheader["pageID"]
         self.slot_num=tempheader["slotNum"]
         # structure: table_name+degrees+field_name+field_type
