@@ -7,7 +7,7 @@ class HeapFileTest(unittest.TestCase):
         print('type encoding and decoding',typestr_to_bytes('CHAR(255)'),typebytes_to_str(b'\x03\xff'))
 
         '''test schema'''
-        schematest1=Schema(inputdata=[('colname1','CHAR(255)'),('colname2','INT32')],relationname='test relation')
+        schematest1=Schema(input_data=[('colname1','CHAR(255)'),('colname2','INT32')],relation_name='test relation')
         print(schematest1.field_domain)
         bytestest1=schematest1.serialize()
         # print(schematest1.deserialize(bytestest1))

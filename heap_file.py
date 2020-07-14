@@ -71,28 +71,24 @@ def get_size(fileobject):
 
 class Schema:
     '''relation schema'''
-    def __init__(self,inputdata,relationname):
+    def __init__(self,input_data,relation_name):
         " initialize schema class with name, count, type "
-        self.relation_name=relationname
-        self.schema_degree=len(inputdata)  # degree of relation
+        self.relation_name=relation_name
+        self.schema_degree=len(input_data)  # degree of relation
         # structure: table_name+degrees+field_name+field_type
         self.schema_size=LEN_String+LEN_Int32+LEN_String*self.schema_degree+LEN_Type*self.schema_degree  # size of the schema
 
         self.field_name=[]  # name of each col
         self.field_domain=[]  # int32 or varchar(N)
-        for i in range(0,self.schema_degree):
-            if inputdata[i][1]!='INT32' and inputdata[i][1]!='INT64' and inputdata[i][1][0:4]!='CHAR':
-                print("only INT32,INT64 and CHAR(N) are allowed")
-                self.field_domain=None
-                self.field_name=None
-                break
-            if inputdata[i][1]!='INT32' and inputdata[i][1]!='INT64' and int(inputdata[i][1][5:-1])>255 and int(inputdata[i][1][5:-1])<0:
-                print("only 0<=N<=255 CHAR(N) is allowed")
-                self.field_domain=None
-                self.field_name=None
-                break
-            self.field_name.append(inputdata[i][0])
-            self.field_domain.append(inputdata[i][1])
+        for (name, data_type) in input_data:
+            if data_type!='INT32' and data_type!='INT64':
+                if not (data_type[:5] == 'CHAR(' and  data_type[-1] == ')'):
+                    raise PyDBInternalError("only INT32,INT64 and CHAR(N) are allowed in Schema")
+                if int(data_type[5:-1]) > 255 and int(data_type[5:-1]) < 0:
+                    raise PyDBInternalError("only 0<=N<=255 CHAR(N) is allowed")
+
+            self.field_name.append(name)
+            self.field_domain.append(data_type)
 
     def get_dict(self):
         # structure: relation_name+degree+field_name+field_type in dict type
@@ -257,7 +253,7 @@ class heap_page:
         for i in range(0,tempheader["schema"]['schema_degree']):
             tempinput.append((tempname[i],tempdomain[i]))
         name=tempheader["schema"]['relation_name']
-        self.page_schema=Schema(inputdata=tempinput,relationname=name)
+        self.page_schema=Schema(input_data=tempinput,relation_name=name)
         self.get_header()
 
         # data fulfil
