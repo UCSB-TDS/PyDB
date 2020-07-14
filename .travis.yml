@@ -1,0 +1,10 @@
+language: python
+python:
+  - "3.8"
+cache: pip
+install:
+  - ls
+  - pip install msgpack-python
+  - pip install -r requirements.txt
+script:
+  - python heap_file_test.py
