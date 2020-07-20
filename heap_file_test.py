@@ -1,6 +1,6 @@
 import unittest
 from heap_file import *
-from Iterator import *
+from operators import *
 
 class HeapFileTest(unittest.TestCase):
     def test_heap_file(self):
