@@ -1,5 +1,6 @@
 import unittest
 from heap_file import *
+from Iterator import *
 
 class HeapFileTest(unittest.TestCase):
     def test_heap_file(self):
@@ -7,34 +8,41 @@ class HeapFileTest(unittest.TestCase):
         print('type encoding and decoding',typestr_to_bytes('CHAR(255)'),typebytes_to_str(b'\x03\xff'))
 
         '''test schema'''
-        schematest1=Schema(input_data=[('colname1','CHAR(255)'),('colname2','INT32')],relation_name='test relation')
-        print(schematest1.field_domain)
-        bytestest1=schematest1.serialize()
-        # print(schematest1.deserialize(bytestest1))
+        schema_test1=Schema(input_data=[('colname1','CHAR(255)'),('colname2','INT32')],relation_name='test relation')
+        print(schema_test1.field_domain)
+        bytestest1=schema_test1.serialize()
+        # print(schema_test1.deserialize(bytestest1))
 
         '''test heap page'''
-        heappagetest1=heap_page(schematest1)
-        heappagetest1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello world','colname2':22})
-        heappagetest1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello DBMS','colname2':333})
-        arraytest=heappagetest1.get_page_data()
-        heappagetest2=heap_page(schematest1)
-        heappagetest2.deserialize(msg_str=arraytest)
-        heappagetest1.print_for_bugs()
+        heap_page_test1=heap_page(schema_test1)
+        heap_page_test1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello world','colname2':22})
+        heap_page_test1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello DBMS','colname2':333})
+        array_test=heap_page_test1.get_page_data()
+        heap_page_test2=heap_page(schema_test1)
+        heap_page_test2.deserialize(msg_str=array_test)
+        heap_page_test1.print_for_bugs()
         print("deserialized page")
-        heappagetest2.print_for_bugs()
-        heappagetest3=heap_page(schematest1)
+        heap_page_test2.print_for_bugs()
+        heap_page_test3=heap_page(schema_test1)
 
         '''test heap file'''
         print("HEAP FILE")
-        heapfiletest=heap_file(schematest1)
-        heapfiletest.write_page(heappagetest1)
-        heapfiletest.read_page(1).print_for_bugs()
-        heapfiletest.write_page(heappagetest2)
-        heapfiletest.write_page(heappagetest3)
-        heapfiletest.read_page(3).print_for_bugs()
-        heapfiletest.read_page(4)
-        print("page index in the header of the heap file:",heapfiletest.header_index)
-        heapfiletest.get_file()
+        heap_file_test=heap_file(schema_test1)
+        heap_file_test.write_page(heap_page_test1)
+        #heap_file_test.read_page(1).print_for_bugs()
+        heap_file_test.write_page(heap_page_test2)
+        heap_file_test.write_page(heap_page_test3)
+        #heap_file_test.read_page(3).print_for_bugs()
+        #heap_file_test.read_page(4)
+        print("page index in the header of the heap file:",heap_file_test.header_index)
+        heap_file_test.get_file()
+        #print('content in a heap file',heap_file_test.get_file_dict())
+
+        '''test iterator'''
+        print('ITERATOR')
+        for c in iterator(input_file=heap_file_test):
+            print(c)
+
 
 if __name__ == '__main__':
     unittest.main()
