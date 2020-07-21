@@ -80,15 +80,15 @@ class Schema:
         for (name, data_type) in input_data:
             if data_type!='INT32' and data_type!='INT64':
                 if not (data_type[:5] == 'CHAR(' and  data_type[-1] == ')'):
-                    raise (PyDBInternalError)("only INT32,INT64 and CHAR(N) are allowed in Schema")
-                if int(data_type[5:-1]) > 255 or int(data_type[5:-1]) < 0:
+                    raise PyDBInternalError("only INT32,INT64 and CHAR(N) are allowed in Schema")
+                if int(data_type[5:-1]) > 255 and int(data_type[5:-1]) < 0:
                     raise PyDBInternalError("only 0<=N<=255 CHAR(N) is allowed")
 
             self.field_name.append(name)
             self.field_domain.append(data_type)
 
     def get_dict(self):
-        # structure: relation_name+degree+field_name+field_type in dict type
+        ''' structure: relation_name+degree+field_name+field_type in dict type'''
         schema_dict = {
             'relation_name':self.relation_name,
             'schema_degree':self.schema_degree
@@ -98,18 +98,18 @@ class Schema:
         return schema_dict
 
     def serialize(self):
-        '''return the bytes array of schema'''
-        # structure: relation_name+degree+field_name+field_type in dict type
-        # serialize the dict of schema
+        '''return the bytes array of schema
+           structure: relation_name+degree+field_name+field_type in dict type
+           serialize the dict of schema'''
         schema_dict=self.get_dict()
         for i in range(0,self.schema_degree):
             schema_dict[self.field_name[i]]=typestr_to_bytes(self.field_domain[i])
         msg_str = msgpack.packb(schema_dict)
-        return msg_str
+        return msg_str 
 
     def deserialize(self,msg_str):
-        '''return the dict of schema from bytes array'''
-        # structure: relation_name+degree+field_name+field_type in dict type
+        '''return the dict of schema from bytes array
+           structure: relation_name+degree+field_name+field_type in dict type'''
         schema_dict = msgpack.unpackb(msg_str, use_list=False)
         self.relation_name=schema_dict['relation_name']
         self.schema_degree=schema_dict['schema_degree']
@@ -125,22 +125,24 @@ class Schema:
         return self.get_dict()==other.get_dict()
 
 class heap_page:
-    '''Each instance of HeapPage stores data for one page of HeapFiles and implements the Page interface that is used by BufferPool.'''
-    # structure of heap_page: [header,[tuple1],[tuple2],..,[tupleN]]
-    # structure of header: [pageId, slotNum, schema]
+
+    '''Each instance of HeapPage stores data for one page of HeapFiles and implements the Page interface that is used by BufferPool.
+      structure of heap_page: [header,[tuple1],[tuple2],..,[tupleN]]
+      structure of header: [pageId, slotNum, schema]'''
     PAGE_ID=0  # unique page id
     def __init__(self,input_schema):
         self.page_size=PAGE_SIZE
 
         heap_page.PAGE_ID+=1
         self.page_id=heap_page.PAGE_ID  # 4 bytes for int type
-        self.slot_num=0  # number of slots that is used
-        self.page_schema=input_schema  # describes the schema of tuples.
+        self.slot_num=0                 # number of slots that is used
+        self.page_schema=input_schema   # describes the schema of tuples.
 
-        self.header_size=LEN_Int32*2+self.page_schema.schema_size
-        if self.header_size>MAX_HEADER_SIZE: print("ERROR: header oversize")
+        self.header_size=LEN_Int32*2+input_schema.schema_size
+        if self.header_size>MAX_HEADER_SIZE:
+            PyDBInternalError("ERROR: header oversize")
 
-        self.page_tuples=[]  # tuple data, store tuples in dictionary formation
+        self.page_tuples=[]             # tuple data, store tuples in dictionary formation
         for i in range(0,MAX_SLOTS):
             tuple1 = {
                 'recordID':[self.page_id,i],
@@ -169,7 +171,7 @@ class heap_page:
 
         # check schema
         if self.page_schema.schema_degree!=len(Tuple)-2:
-            raise (PyDBInternalError)("degrees not match between input tuple and page_schema in this page")
+            raise PyDBInternalError("degrees not match between input tuple and page_schema in this page")
         index=0
         for key in Tuple:
             if key!='recordID' and key!='size':
@@ -179,7 +181,7 @@ class heap_page:
 
         # check whether a slot can tolerate this tuple, and store the size
         if len(msgpack.packb(Tuple))>SLOT_SIZE:
-            raise (PyDBInternalError)("Tuple's size surpass the limit")
+            raise PyDBInternalError("Tuple's size surpass the limit")
 
         # insert tuple
         for i in range(0,MAX_SLOTS):
@@ -263,9 +265,9 @@ class heap_page:
         return 0
 
 class heap_file:
-    ''' a collection of those pages'''
-    # structure of heap file:[header,block of pages]
-    # structure of header:[file_id,page_num,schema,header_index]
+    ''' a collection of those pages
+        structure of heap file:[header,block of pages]
+        structure of header:[file_id,page_num,schema,header_index] '''
     HeapFile_ID=0  # unique heap file's id
     def __init__(self,input_schema):
         self.file_size=HEAPFILE_SIZE
@@ -282,10 +284,10 @@ class heap_file:
             self.header_index.append(0)
 
     def read_page(self,pid):
-        '''Read the specified page from disk'''
-        # tuple structure:[RecordID(pageID,slotNo.),size,schema,data in each column]
-        # structure of page_file: [header,[[tuple1],[tuple2],..,[tupleN]]]
-        # header contains [pageId, slotNum, schema] of this page
+        '''Read the specified page from disk
+          tuple structure:[RecordID(pageID,slotNo.),size,schema,data in each column]
+          structure of page_file: [header,[[tuple1],[tuple2],..,[tupleN]]]
+          header contains [pageId, slotNum, schema] of this page '''
         flag=0  # flag of whether target page is found
         for i in range(0,MAX_PAGES):
             # tempid=int32_from_bytes(self.file_page_bytes[i].raw[0:LEN_Int32])
@@ -325,8 +327,8 @@ class heap_file:
         return 1
 
     def get_file_dict(self):
-        '''get the file in dict form'''
-        # structure of header:[file_id,page_num,schema,header_index]
+        '''get the file in dict form
+           structure of header:[file_id,page_num,schema,header_index]'''
         header={
             'file_id':self.file_id,
             'page_num':self.page_num,
@@ -346,7 +348,8 @@ class heap_file:
         return file
 
     def get_file(self):
-        '''Returns the File backing this HeapFile on disk'''
-        # structure of heap file:[header,block of pages],structure of header:[file_id,page_num,schema,header_index]
+        '''Returns the File backing this HeapFile on disk
+           structure of heap file:[header,block of pages], 
+           structure of header:[file_id,page_num,schema,header_index]'''
         msg_str = msgpack.packb(self.get_file_dict())
         return msg_str
