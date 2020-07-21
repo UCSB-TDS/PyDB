@@ -43,6 +43,7 @@ class HeapFileTest(unittest.TestCase):
         for c in iterator(input_file=heap_file_test):
             print(c)
 
+
 if __name__ == '__main__':
     unittest.main()
     suite = unittest.TestSuite()

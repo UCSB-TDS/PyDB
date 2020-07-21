@@ -80,8 +80,8 @@ class Schema:
         for (name, data_type) in input_data:
             if data_type!='INT32' and data_type!='INT64':
                 if not (data_type[:5] == 'CHAR(' and  data_type[-1] == ')'):
-                    raise (PyDBInternalError)("only INT32,INT64 and CHAR(N) are allowed in Schema")
-                if int(data_type[5:-1]) > 255 or int(data_type[5:-1]) < 0:
+                    raise PyDBInternalError("only INT32,INT64 and CHAR(N) are allowed in Schema")
+                if int(data_type[5:-1]) > 255 and int(data_type[5:-1]) < 0:
                     raise PyDBInternalError("only 0<=N<=255 CHAR(N) is allowed")
 
             self.field_name.append(name)
