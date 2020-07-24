@@ -25,14 +25,14 @@ def int32_to_bytes(x: int) -> bytes:
         temp=struct.pack('i',x)
         return temp
     except:
-        raise (PyDBInternalError)("int32 input out of range")
+        raise PyDBInternalError("int32 input out of range")
 
 def int32_from_bytes(xbytes):
     try:
         temp=struct.unpack('i',xbytes)[0]
         return temp
     except:
-        raise (PyDBInternalError)("bytes length input out of range")
+        raise PyDBInternalError("bytes length input out of range")
 
 def typestr_to_bytes(tstring):
     '''turn string of type to bytes'''
@@ -44,7 +44,7 @@ def typestr_to_bytes(tstring):
         N=int(tstring[5:-1])
         tbytes=int32_to_bytes(3+256*N)[0:2]  # 0x03 means CHAR,the last one encodes N(<=255)
     else:
-        raise (PyDBInternalError)("only suit for INT32, INT64,CHAR(N),N<=255")
+        raise PyDBInternalError("only suit for INT32, INT64,CHAR(N),N<=255")
     return tbytes
 
 def typebytes_to_str(tbytes):
@@ -57,7 +57,7 @@ def typebytes_to_str(tbytes):
         N=tbytes[1]
         tstring='CHAR('+str(N)+')'
     else:
-        raise (PyDBInternalError)("only suit for INT32, INT64,CHAR(N),N<=255")
+        raise PyDBInternalError("only suit for INT32, INT64,CHAR(N),N<=255")
     return tstring
 
 def get_size(fileobject):
@@ -124,7 +124,7 @@ class Schema:
     def __eq__(self, other):
         return self.get_dict()==other.get_dict()
 
-class heap_page:
+class HeapPage:
 
     '''Each instance of HeapPage stores data for one page of HeapFiles and implements the Page interface that is used by BufferPool.
       structure of heap_page: [header,[tuple1],[tuple2],..,[tupleN]]
@@ -133,8 +133,8 @@ class heap_page:
     def __init__(self,input_schema):
         self.page_size=PAGE_SIZE
 
-        heap_page.PAGE_ID+=1
-        self.page_id=heap_page.PAGE_ID  # 4 bytes for int type
+        HeapPage.PAGE_ID+=1
+        self.page_id=HeapPage.PAGE_ID  # 4 bytes for int type
         self.slot_num=0                 # number of slots that is used
         self.page_schema=input_schema   # describes the schema of tuples.
 
@@ -149,12 +149,11 @@ class heap_page:
                 'size':0  # size=0 means empty slot, size= SLOT_SIZE means tuple with data
             }
             temp_schema=self.page_schema
-            j=0
             for x in temp_schema.field_name:
                 tuple1[x]=None
-                j+=1
             self.page_tuples.append(tuple1)
         self.get_header()
+        self.is_dirty=False
 
     def get_id(self):
         """ get the id of this page
@@ -176,7 +175,7 @@ class heap_page:
         for key in Tuple:
             if key!='recordID' and key!='size':
                 if key!=self.page_schema.field_name[index]:
-                    raise (PyDBInternalError)("schema not match")
+                    raise PyDBInternalError("schema not match")
                 index+=1
 
         # check whether a slot can tolerate this tuple, and store the size
@@ -191,7 +190,21 @@ class heap_page:
                 print("insertion succeed")
                 self.slot_num+=1
                 self.get_header()
+                self.is_dirty=True
                 return 0
+
+    def delete_tuple(self,tuple_id):
+        '''delete tuple in heap page'''
+        if tuple_id>MAX_SLOTS:
+            raise PyDBInternalError("tuple not exist, tuple ID too large")
+        if self.page_tuples[tuple_id]['recordID'][1]==tuple_id:
+            self.page_tuples[tuple_id]['size']=0
+            for x in self.page_schema.field_name:
+                self.page_tuples[tuple_id][x]=None
+            self.is_dirty=True
+            return 'delete successfully'
+        else:
+            raise PyDBInternalError("tuple ID not match")
 
     def get_header(self):
         '''return the byte array of header of this page'''
@@ -263,8 +276,11 @@ class heap_page:
         print("tuples in this page:",self.page_tuples)
         # print("bytesdata of the page:",self.page_bytesdata)
         return 0
+'''
+    def __eq__(self, other):
+        return self.get_page_dict()==other.get_page_dict()'''
 
-class heap_file:
+class HeapFile:
     ''' a collection of those pages
         structure of heap file:[header,block of pages]
         structure of header:[file_id,page_num,schema,header_index] '''
@@ -272,8 +288,8 @@ class heap_file:
     def __init__(self,input_schema):
         self.file_size=HEAPFILE_SIZE
 
-        heap_file.HeapFile_ID+=1
-        self.file_id=heap_file.HeapFile_ID
+        HeapFile.HeapFile_ID+=1
+        self.file_id=HeapFile.HeapFile_ID
         self.page_num=0
         self.file_schema=input_schema  # schema of each page
         self.header_index=[]  # the metadata of page id, structure:[pid1,pid2,...]
@@ -304,11 +320,11 @@ class heap_file:
         '''Push the specified page to file'''
         # schema check
         if self.file_schema!=input_page.page_schema:
-            raise (PyDBInternalError)("schema not match")
+            raise PyDBInternalError("schema not match")
 
         # size check
         if len(input_page.get_page_data())>PAGE_SIZE:
-            raise (PyDBInternalError)("page is oversized")
+            raise PyDBInternalError("page is oversized")
 
         # if the page exist
         for i in range(0,MAX_PAGES):
@@ -353,3 +369,34 @@ class heap_file:
            structure of header:[file_id,page_num,schema,header_index]'''
         msg_str = msgpack.packb(self.get_file_dict())
         return msg_str
+
+    def insert_tuple(self,input_tuple):
+        '''insert a tuple to this heap file'''
+        i=-1
+        for page in self.file_pages:
+            i+=1
+            if page!=None:
+                if page.slot_num<MAX_SLOTS:
+                    if page.insert_tuple(input_tuple)==0: # return 0 if succeed inserting
+                        self.file_pages[i]=page
+                        return page
+
+        # pages are all full, need to creat an overflow page
+        for i in range(MAX_PAGES):
+            if self.file_pages[i]==None:
+                overflow_page=HeapPage(input_schema=self.file_schema)
+                overflow_page.insert_tuple(input_tuple)
+                self.file_pages[i]=overflow_page
+                self.header_index[i]=overflow_page.page_id
+                return overflow_page
+        raise PyDBInternalError("no enough space in this heap file")
+
+    def delete_tuple(self,RecordID):
+        '''remove the specific tuple according to recordID'''
+        page_id=RecordID[0]
+        tuple_id=RecordID[1]
+        for index in range(MAX_PAGES):
+            if self.header_index[index]==page_id:
+                self.file_pages[index].delete_tuple(tuple_id)
+                return 0
+        raise PyDBInternalError("tuple not exist,due to the lack of certain page")

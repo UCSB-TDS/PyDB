@@ -15,23 +15,23 @@ class HeapFileTest(unittest.TestCase):
         # print(schema_test1.deserialize(bytestest1))
 
         '''test heap page'''
-        heap_page_test1=heap_page(schema_test1)
+        heap_page_test1=HeapPage(schema_test1)
         heap_page_test1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello world','colname2':22})
         heap_page_test1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello DBMS','colname2':333})
         array_test=heap_page_test1.get_page_data()
-        heap_page_test2=heap_page(schema_test1)
+        heap_page_test2=HeapPage(schema_test1)
         heap_page_test2.deserialize(msg_str=array_test)
         heap_page_test1.print_for_bugs()
         print("deserialized page")
         heap_page_test2.print_for_bugs()
-        heap_page_test3=heap_page(schema_test1)
+        heap_page_test3=HeapPage(schema_test1)
 
         '''test heap file'''
         print("HEAP FILE")
-        heap_file_test=heap_file(schema_test1)
+        heap_file_test=HeapFile(schema_test1)
         heap_file_test.write_page(heap_page_test1)
         #heap_file_test.read_page(1).print_for_bugs()
-        heap_file_test.write_page(heap_page_test2)
+        heap_file_test.write_page(heap_page_test2)  # deserialize result of page1
         heap_file_test.write_page(heap_page_test3)
         #heap_file_test.read_page(3).print_for_bugs()
         #heap_file_test.read_page(4)
@@ -39,10 +39,19 @@ class HeapFileTest(unittest.TestCase):
         heap_file_test.get_file()
         #print('content in a heap file',heap_file_test.get_file_dict())
 
+        '''test HeapFile tuple insertion'''
+        heap_file_test.insert_tuple(input_tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello DBMS','colname2':333})
+        heap_file_test.insert_tuple(input_tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello DBMS','colname2':333})
+        heap_file_test.insert_tuple(input_tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello DBMS','colname2':333})
+
+        '''test HeapFile tuple deletion'''
+        heap_file_test.delete_tuple([3,1])
+
         '''test iterator'''
         print('ITERATOR')
-        for c in iterator(input_file=heap_file_test):
-            print(c)
+        for c in Iterator(input_file=heap_file_test):
+            if c:
+                print(c)
 
 if __name__ == '__main__':
     unittest.main()

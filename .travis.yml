@@ -8,3 +8,5 @@ install:
   - pip install -r requirements.txt
 script:
   - python heap_file_test.py
+  - python buffer_pool_test.py
+  - python operators_test.py
