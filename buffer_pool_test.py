@@ -4,46 +4,25 @@ from buffer_pool import *
 class BufferPoolTest(unittest.TestCase):
 
     def test_Buffer_Pool(self):
-        '''  test field  '''
-        print("create a field")
-        F1=Fields()
-        F1.set_fields()
-        '''  test tuple  '''
-        print("create a tuple")
-        T1=Tuple()
-        T1.set_field(F1)
-        T1.fulfill_info()
-        print(T1.toString())
-        '''  test page_file  '''
-        print("create a page_file")
-        print("create a page_file,by gettin page from a physical file")
-        PF1=page_file()
-        f=open("pagefile1.dat","wb")
-        f.close()
-        tempid=PF1.get_id("pagefile1.dat")
-        tempdata=PF1.get_page_data("pagefile1.dat")
-        PF1.insert_tuple(T1)
-        print("page ID:",tempid,"\n","page bytes DATA:",tempdata)
-        '''  test buffer pool  '''
-        print("buffer pool")
-        size=8*PAGE_SIZE
-        bp1=buffer_pool(size)
-        bp1.pool_pages[0]=PF1
-        bp1.pool_num=1
-        pid=PF1.page_id
-        print("pid",pid,"page file slots:",PF1.page_slotnum)
-        print("total number of space/pages:", len(bp1.pool_pages))
-        print("get page with pid=",pid,"\n",bp1.get_page(pid))
-        ttemp=Tuple()
-        print(PF1.page_data,"DEBUG1",T1,"DEBUG2")
-        print(bp1.delete_tuple(T1.tuple_tid,ttemp))
-        print(bp1.discard_page(pid))
-        '''  test insert_tuple to file  '''
-        PF1.insert_tupletofile(T1,"pagefile1.dat")
-        print("show new info")
-        tempid=PF1.get_id("pagefile1.dat")
-        tempdata=PF1.get_page_data("pagefile1.dat")
-        print("page ID:",tempid,"\n","page bytes DATA:",tempdata)
+        '''test buffer_pool.py, an implementation of buffer pool'''
+        buffer_pool_test=buffer_pool(numPages=1)
+        # relation1
+        schema_test1=Schema(input_data=[('colname1','CHAR(255)'),('colname2','INT32')],relation_name='test relation1')
+        heap_page_test1=HeapPage(schema_test1)
+        heap_page_test1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello world','colname2':1})
+        heap_page_test1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello DBMS','colname2':22})
+        heap_page_test2=HeapPage(schema_test1)
+        heap_page_test2.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'another page','colname2':333})
+        table1=HeapFile(schema_test1)
+        table1.write_page(heap_page_test1)
+        table1.write_page(heap_page_test2)
+
+        buffer_pool_test.insert_tuple(tid=1,table=table1,Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'another page','colname2':333})
+        buffer_pool_test.insert_tuple(tid=1,table=table1,Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'another page','colname2':333})
+        print(buffer_pool_test.page_array,buffer_pool_test.page_index)
+        buffer_pool_test.delete_tuple(tid=1,tupleID=[3,0])
+        print(buffer_pool_test.page_index)
+
 
 if __name__ == '__main__':
     unittest.main()

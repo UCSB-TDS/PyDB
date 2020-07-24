@@ -33,7 +33,7 @@ def get_type(input_value):
         else:
             raise PyDBInternalError('N of CHAR(N) should be less than 256')
 
-class iterator:
+class Iterator:
     '''iterator of a relation file'''
     def __init__(self, input_file):
         self.data=input_file.get_file_dict()
@@ -57,7 +57,7 @@ class iterator:
             temp_page=self.data[temp]
             if temp_page==None:
                 self.current+=MAX_SLOTS-1
-                # print(temp,'empty block')
+                print(temp,'empty block')
                 return None
             else:
                 j=self.current%MAX_SLOTS
@@ -66,13 +66,13 @@ class iterator:
                 temp='tuple'+str(j)
                 temp_tuple=temp_page[temp]
                 if temp_tuple['size']==0:
-                    # print('empty slot')
+                    print(temp,'empty slot')
                     return None
                 else:
                     return temp_tuple
         raise StopIteration
 
-class filter:
+class Filter:
     '''filter operator'''
     def __init__(self,relation,operand):
         '''operand structure: 'field_name'='field_value' '''
@@ -92,7 +92,7 @@ class filter:
     def get_tuple(self):
         '''return the tuples fit the operand in filter'''
         result=[]
-        for c in iterator(input_file=self.input_file):
+        for c in Iterator(input_file=self.input_file):
             if c!=None:
                 if c[self.field_name]==self.field_value:
                     result.append(c)
@@ -102,7 +102,7 @@ class filter:
         else:
             return result
 
-class join:
+class Join:
     '''a simple nested loops join'''
     def __init__(self,relation1,relation2,operand):
         ''' operand structure: 'relation1.colname=relation2.colname' '''
@@ -133,10 +133,10 @@ class join:
         '''return the tuples fit the operand in join'''
         join_result=[]
         dict_id=0
-        for tuple1 in iterator(input_file=self.relation1_file):
+        for tuple1 in Iterator(input_file=self.relation1_file):
             if tuple1==None:
                 continue
-            for tuple2 in iterator(input_file=self.relation2_file):
+            for tuple2 in Iterator(input_file=self.relation2_file):
                 if tuple2==None:
                     continue
                 if tuple1[self.relation1_field_name]==tuple2[self.relation2_field_name]:
@@ -154,7 +154,7 @@ class join:
                     join_result.append(join_dict)
         return join_result
 
-class aggregate:
+class Aggregate:
     '''computes an aggregate (e.g., sum, avg, max, min) and group by, only support a single column'''
     def __init__(self,relation,col_name):
         self.relation_file=relation
@@ -166,7 +166,7 @@ class aggregate:
         '''return the distinct elements of a column'''
         col_name_existence(self.relation_data,gcol_name)
         result=[]
-        for Tuple in iterator(input_file=self.relation_file):
+        for Tuple in Iterator(input_file=self.relation_file):
             if Tuple!=None:
                 flag=0
                 for element in result:
@@ -182,7 +182,7 @@ class aggregate:
         if gcol_name==-1:
             '''calculate without GroupBy'''
             Sum=0
-            for Tuple in iterator(input_file=self.relation_file):
+            for Tuple in Iterator(input_file=self.relation_file):
                 if Tuple!=None:
                     Sum+=Tuple[self.col_name]
             return {self.col_name:Sum}
@@ -193,7 +193,7 @@ class aggregate:
             sum_result={}
             for elem in col_group:
                 sum_result[elem]=0
-            for Tuple in iterator(input_file=self.relation_file):
+            for Tuple in Iterator(input_file=self.relation_file):
                 if Tuple!=None:
                     for elem in col_group:
                         if Tuple[gcol_name]==elem:
@@ -206,7 +206,7 @@ class aggregate:
         if gcol_name==-1:
             '''calculate without GroupBy'''
             Count=0
-            for Tuple in iterator(input_file=self.relation_file):
+            for Tuple in Iterator(input_file=self.relation_file):
                 if Tuple!=None:
                     if Tuple[self.col_name]!=None:
                         Count+=1
@@ -218,7 +218,7 @@ class aggregate:
             count_result={}
             for elem in col_group:
                 count_result[elem]=0
-            for Tuple in iterator(input_file=self.relation_file):
+            for Tuple in Iterator(input_file=self.relation_file):
                 if Tuple!=None:
                     for elem in col_group:
                         if Tuple[gcol_name]==elem:
@@ -248,7 +248,7 @@ class aggregate:
         if gcol_name==-1:
             '''calculate without GroupBy'''
             Max=-2**63
-            for Tuple in iterator(input_file=self.relation_file):
+            for Tuple in Iterator(input_file=self.relation_file):
                 if Tuple!=None:
                     if Tuple[self.col_name]>Max:
                         Max=Tuple[self.col_name]
@@ -260,7 +260,7 @@ class aggregate:
             max_result={}
             for elem in col_group:
                 max_result[elem]=-2**63
-            for Tuple in iterator(input_file=self.relation_file):
+            for Tuple in Iterator(input_file=self.relation_file):
                 if Tuple!=None:
                     for elem in col_group:
                         if Tuple[gcol_name]==elem:
@@ -276,7 +276,7 @@ class aggregate:
         if gcol_name==-1:
             '''calculate without GroupBy'''
             Min=-2**63
-            for Tuple in iterator(input_file=self.relation_file):
+            for Tuple in Iterator(input_file=self.relation_file):
                 if Tuple!=None:
                     if Tuple[self.col_name]>Min:
                         Min=Tuple[self.col_name]
@@ -288,7 +288,7 @@ class aggregate:
             min_result={}
             for elem in col_group:
                 min_result[elem]=2**63
-            for Tuple in iterator(input_file=self.relation_file):
+            for Tuple in Iterator(input_file=self.relation_file):
                 if Tuple!=None:
                     for elem in col_group:
                         if Tuple[gcol_name]==elem:
@@ -296,3 +296,19 @@ class aggregate:
                                 min_result[elem]=Tuple[self.col_name]
                                 break
             return min_result
+
+class Insert:
+    '''Inserts tuples read from the child operator into the relation'''
+    def __init__(self,input_tuple,input_relation):
+        self.relation_data=input_relation.get_file_dict()
+        # exam whether the schema matches or not
+        for key in input_tuple:
+            if key!='recordID' and key!='size':
+                col_name_existence(self.relation_data,key)
+        # insertion
+        input_relation.insert_tuple(input_tuple)
+
+class Delete:
+    '''Delete reads tuples from its child operator and removes them from the relation they belong to'''
+    def __init__(self,input_tuple,input_relation):
+        input_relation.delete_tuple(input_tuple['recordID'])

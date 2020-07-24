@@ -1,211 +1,90 @@
-# task 1: implement page file
-# task 2: buffer pool
-import unittest
-from os import popen
-try:
-	import cPickle as pickle
-except:
-	import pickle
-HEAPfile_SIZE = 40960
-PAGE_SIZE = 4096															# 6size of binary arrays? or real data
-SLOT_SIZE = 256  # 14 TOTAL SLOTS
-NUMOFRECORDS_SIZE = 17  # record the num of total slots in page
-MAX_RECORDS = (PAGE_SIZE-NUMOFRECORDS_SIZE)/SLOT_SIZE
+from PyDBError import *
+from heap_file import *
+import random
 
-# get size of file
-def getSize(fileobject):
-	fileobject.seek(0,2)  # move the cursor to the end of the file
-	size = fileobject.tell()
-	return size
-
-class Fields:
-	def __init__(self):
-		self.field_name=[]
-		self.field_count=0
-		self.type=''  # INT_TYPE or STRING_TYPE
-	'''field set up'''
-	def set_fields(self):
-		self.type=input("field type, INT_TYPE or STRING_TYPE:",)
-		if self.type!='INT_TYPE' and self.type!='STRING_TYPE':
-			print("only INT_TYPE or STRING_TYPE is admitted")
-			self.type=''
-			return 0
-		temp=''
-		i=1
-		while 1:
-			temp = input("fieldname"+str(i)+"(input nothing to continue):",)
-			i+=1
-			if temp == '':
-				break
-			self.field_name.append(temp)
-	'''get the type of field'''
-	def get_ftype(self):
-		return self.type
-
-class Tuple:
-	# structure of tuple_data:[col1,col2,...,colN]
-	def __init__(self):
-		self.tuple_data=[]
-		self.tuple_colnum=0
-		self.tuple_fields=''
-		self.tuple_tid=0
-		self.tuple_Rid=[0,0]  # (PageID,slotNum)
-	'''inout information to field'''
-	def fulfill_info(self):
-		# input new tuple value
-		for i in range(0,self.tuple_colnum):
-			tempval=input("Fieldname--"+self.tuple_fields.field_name[i]+":",)
-			self.tuple_data.append(tempval)
-	'''set the field for the tuple'''
-	def set_field(self,Fields):
-		self.tuple_colnum=len(Fields.field_name)
-		self.tuple_fields=Fields
-		# count++
-		Fields.field_count+=1
-		self.tuple_tid=Fields.field_count
-	'''get the field of a tuple'''
-	def get_Field(self):
-		return self.tuple_fields
-
-	def toString(self):
-		outString=''
-		for i in range(0,self.tuple_colnum):
-			outString+=str(self.tuple_data[i])+'\t'
-		outString+='\n'
-		return outString
-
-class page_file:													# 1heap files contains many pages or only page?
-	# structure of page_file: [slotnum,[tuple1],[tuple2],..,[tupleN]]
-	def __init__(self):
-		self.page_id=''
-		self.page_data=[]  # normal data
-		self.page_bytesarrays=[]  # bytes arrays
-		self.page_size=PAGE_SIZE
-		self.page_slotnum=0
-		self.page_num=0  # num in heap file
-	'''get the id of a page'''
-	def get_id(self,fileNAME):
-		""" get the id of this page
-		"""
-		tempid=popen(fr"fsutil file queryfileid " +fileNAME).read() #get id of page file
-		startp=tempid.rfind("0x")
-		self.page_id=tempid[startp:-1] # -hash(tempid[startp:-1])  # hash the file's id
-		return self.page_id  #string of page id
-	'''get the page_data in a page'''
-	def get_page_data(self,fileNAME):
-		""" return the byte array data contained in this page
-		"""
-		f = open(fileNAME, 'r+b')
-		self.page_bytesarrays=f.read()  # get the byte arrays
-		f.seek(0)
-		try:
-			temp=pickle.load(f)  # convert the byte arrays to data
-			self.page_data=temp
-			self.page_slotnum=temp[0]
-		except:
-			print("empty file")
-		f.close()
-		return self.page_bytesarrays  # return the byte arrays
-	''' insert a tuple to file_page'''
-	def insert_tuple(self,Tuple):
-		""" adds the specified tuple to this page
-		"""
-		if self.page_slotnum+1>MAX_RECORDS:
-			print("no space, need to create an overflow page")
-			# create overflow page
-			return 0
-		else:
-			self.page_slotnum+=1
-			# change the tuple_Rid to (PageId, slotnum)
-			Tuple.tuple_Rid[0]=self.page_id
-			Tuple.tuple_Rid[1]=self.page_slotnum
-			self.page_data.append(Tuple)							#2:how to convert to binary?
-		return 0
-	'''insert a tuple to a file according to filename'''
-	def insert_tupletofile(self,Tuple,fileNAME):
-		# write into the file
-		f = open(fileNAME, 'r+b')
-		try:
-			temp=pickle.load(f)#convert the byte arrays to data
-		except:
-			print("empty file2")
-			temp=[0]
-		f.close()
-		if temp[0]>MAX_RECORDS:
-			print("no space, need to create an overflow page")
-			return 0
-			# need an overflow page
-		else :
-			f = open(fileNAME, 'w+b')
-			temp[0]+=1
-			f.seek(0)
-			f.truncate()
-			pickle.dump(temp, f)#change the content of slot count
-			pickle.dump(Tuple, f) #convert the data to byte arrays
-			f.close()
-		return 0
-	'''print the content in page'''
-	def print_for_bugs(self):
-		print("pageid:",self.page_id)
-		print("pagedata",self.page_data)
-		print("pagebytesarrays:",self.page_bytesarrays)
-		return 0
-# create an  overflow page
-def Overflow_page(Tuple):
-	newpf=page_file()
-	Tuple.tuple_Rid[0]=newpf.page_id
-	Tuple.tuple_Rid[1]=newpf.page_slotnum
-	newpf.page_data.append(Tuple)
-	return newpf
+HEAPFILE_SIZE = 40960
+PAGE_SIZE = 5120
+SLOT_SIZE = 2048
+MAX_HEADER_SIZE = 1024
+MAX_SLOTS = (PAGE_SIZE-MAX_HEADER_SIZE)//SLOT_SIZE  # 4 TOTAL SLOTS, Each slot can hold one tuple
+MAX_PAGES = (HEAPFILE_SIZE-MAX_HEADER_SIZE)//PAGE_SIZE
+# numPages = 4  # maximum number of pages in this buffer pool.
 
 class buffer_pool:
+	'''BufferPool manages the reading and writing of pages into memory from
+	disk. Access methods call into it to retrieve pages, and it fetches
+	pages from the appropriate location'''
+	def __init__(self,numPages):
+		self.num_pages=numPages
+		self.page_array=[]
+		self.lock=[]
+		self.page_index=[]
+		for i in range(numPages):
+			self.page_array.append(None)
+			self.lock.append(False)
+			self.page_index.append(-1)
 
-	def __init__(self,size):
-		#PAGE_SIZE = 4096
-		self.MAX_PAGES = size//PAGE_SIZE
-		self.pool_pages=[] #buffer pages, from 0-defaul_pages
-		for i in range(0,self.MAX_PAGES):
-			self.pool_pages.append(page_file())
-		self.pool_num=0
-	'''delete the tuple in buffer pool according to tuple id, and store the deleted one in t'''
-	def delete_tuple(self,tid, t):													#tuple id or record id?
-		# tid=tuple _Rid
-		for i in range(0,self.pool_num):
-			# tid == tuple id
-			for j in range(0,self.pool_pages[i].page_slotnum):
-				print("DEBUG",tid,self.pool_pages[i].page_data[j].tuple_tid)
-				if self.pool_pages[i].page_data[j].tuple_tid==tid:
-					t=self.pool_pages[i].page_data[j]
-					self.pool_pages[i].page_data[j]=[]
-					s="tuple with ID:"+str(tid)+" delete successfully"
-					return s
-			# if tid stands for tuple Rid
-			'''
-			if self.pool_pages[i].page_id==tPage_id:
-				#search in this page
-				t=self.pool_pages[i].page_data[tSlotnum]
-				self.pool_pages[i].page_data[tSlotnum]=[]#delete the target tuple
-				return t
-			'''
-		# tid == tuple id
-		return "tuple not found"
-	'''discard the page file from the buffer according to page id'''
+	def evict_pages(self):
+		'''randomly choose the page that will be evicted
+		Discards a page from the buffer pool.
+		Flushes the page to disk to ensure dirty pages are updated on disk.'''
+		random_NO=random.randint(0,self.num_pages-1)
+		self.flush_page(self.page_index[random_NO])
+		self.page_index[random_NO]=-1
+		self.page_array[random_NO]=None
+		return random_NO
+
+	def flush_page(self,pid):
+		'''Flushes a certain page to disk'''
+		pindex=-1
+		for i in range(self.num_pages):
+			if self.page_index[i]==pid:
+				pindex=i
+		if pindex==-1:
+			raise PyDBInternalError("page not found in buffer pool")
+
+		if self.page_array[pindex].is_dirty==False:
+			print('this page is not dirty, no need to flush')
+			return 0
+		else:
+			# flush the page to heap file
+			heap_file=HeapFile(self.page_array[pindex].page_schema)  # really need to create a new file?
+			heap_file.write_page(self.page_array[pindex])
+
+	def delete_tuple(self,tid,tupleID):
+		'''Remove the specified tuple from the buffer pool'''
+		pindex=-1
+		for i in range(self.num_pages):
+			if self.page_index[i]==tupleID[0]:
+				pindex=i
+				break
+		if pindex==-1:
+			raise PyDBInternalError("page not found in buffer pool")
+		self.page_array[pindex].delete_tuple(tupleID[1])
+
+	def insert_tuple(self,tid,table,Tuple):
+		'''Add a tuple to the specified table behalf of transaction tid'''
+		page=table.insert_tuple(Tuple)
+		flag=-1
+		for i in range(self.num_pages):
+			if self.page_array[i]==None:
+				self.page_array[i]=page
+				self.page_index[i]=page.get_id()
+				flag=1
+				return 0
+		if flag==-1:
+			evict_id=self.evict_pages()
+			self.page_array[evict_id]=page
+			self.page_index[evict_id]=page.get_id()
+			return 0
+
 	def discard_page(self,pid):
-		for i in range(0,self.pool_num):
-			if self.pool_pages[i].page_id==pid:
-				# discard page from buffer by freeing the space of pages[i]
-				self.pool_pages[i]=page_file()
-				return "page discard successfully!"
-		return "page not found"
-	'''get the page file from the buffer according to page id(pid)'''
-	def get_page(self,pid):											#4from the buffer?
-		output=page_file()
-		for i in range(0,self.pool_num):
-			if self.pool_pages[i].page_id==pid:
-				# get the page
-				output = self.pool_pages[i]
-				return output
-		return "page not found"
-
-	def read_page(self,pid,heap_file):										#5add new page from the heap file?
-		pass
+		'''Remove the specific page from the buffer pool'''
+		for i in range(self.num_pages):
+			if self.page_index[i]==pid:
+				self.flush_page(pid)
+				self.page_array[i]=None
+				self.page_index[i]=-1
+				return 0
+		print('page not found')
+		return 0
