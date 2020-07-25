@@ -202,6 +202,7 @@ class HeapPage:
             for x in self.page_schema.field_name:
                 self.page_tuples[tuple_id][x]=None
             self.is_dirty=True
+            self.slot_num-=1
             return 'delete successfully'
         else:
             raise PyDBInternalError("tuple ID not match")

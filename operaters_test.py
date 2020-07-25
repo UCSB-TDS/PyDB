@@ -41,14 +41,16 @@ class OperatorTest(unittest.TestCase):
 
         '''aggregate test'''
         agg=Aggregate(relation=heap_file_test2,col_name='colname4')
-        print('aggregate test:\n','sum=',agg.SUM('colname3'),'count=',agg.COUNT('colname3'),'average=',agg.AVG('colname3'),
-              'max=',agg.MAX('colname3'),'min=',agg.MIN('colname3'),'groupby col3',agg.GroupBy('colname3'))
+        print('aggregate test:\n','sum=',agg.SUM('colname3'),'count=',agg.COUNT('colname3'),'\naverage=',agg.AVG('colname3'),
+              'max=',agg.MAX('colname3'),'\nmin=',agg.MIN('colname3'),'groupby col3',agg.GroupBy('colname3'))
 
         '''insert and delete test'''
         Insert(input_tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname3':'hello DBMS','colname4':22},
                input_relation=heap_file_test2)
+        print('slot_num of page',heap_file_test2.file_pages[1].slot_num)
         Delete(input_tuple={'recordID':[4,0],'size':SLOT_SIZE,'colname3':'hello DBMS','colname4':22},
                input_relation=heap_file_test2)
+        print('slot_num of page',heap_file_test2.file_pages[1].slot_num)
 
 
 if __name__ == '__main__':
