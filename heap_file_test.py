@@ -2,7 +2,6 @@ import unittest
 from heap_file import *
 from operators import *
 
-
 class HeapFileTest(unittest.TestCase):
     def test_heap_file(self):
         '''type encode'''
@@ -20,6 +19,7 @@ class HeapFileTest(unittest.TestCase):
         heap_page_test1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello DBMS','colname2':333})
         array_test=heap_page_test1.get_page_data()
         heap_page_test2=HeapPage(schema_test1)
+
         heap_page_test2.deserialize(msg_str=array_test)
         heap_page_test1.print_for_bugs()
         print("deserialized page")
@@ -32,6 +32,7 @@ class HeapFileTest(unittest.TestCase):
         heap_file_test.write_page(heap_page_test1)
         #heap_file_test.read_page(1).print_for_bugs()
         heap_file_test.write_page(heap_page_test2)  # deserialize result of page1
+
         heap_file_test.write_page(heap_page_test3)
         #heap_file_test.read_page(3).print_for_bugs()
         #heap_file_test.read_page(4)
@@ -52,6 +53,7 @@ class HeapFileTest(unittest.TestCase):
         for c in Iterator(input_file=heap_file_test):
             if c:
                 print(c)
+
 
 if __name__ == '__main__':
     unittest.main()

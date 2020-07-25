@@ -27,6 +27,7 @@ def int32_to_bytes(x: int) -> bytes:
     except:
         raise PyDBInternalError("int32 input out of range")
 
+
 def int32_from_bytes(xbytes):
     try:
         temp=struct.unpack('i',xbytes)[0]
@@ -125,7 +126,6 @@ class Schema:
         return self.get_dict()==other.get_dict()
 
 class HeapPage:
-
     '''Each instance of HeapPage stores data for one page of HeapFiles and implements the Page interface that is used by BufferPool.
       structure of heap_page: [header,[tuple1],[tuple2],..,[tupleN]]
       structure of header: [pageId, slotNum, schema]'''
