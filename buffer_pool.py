@@ -1,6 +1,7 @@
 from PyDBError import *
 from heap_file import *
 import random
+import msgpack
 
 HEAPFILE_SIZE = 40960
 PAGE_SIZE = 5120
@@ -43,13 +44,16 @@ class buffer_pool:
 		if pindex==-1:
 			raise PyDBInternalError("page not found in buffer pool")
 
-		if self.page_array[pindex].is_dirty==False:
+		if self.page_array[pindex][0][3]==False:  # dirty or not
 			print('this page is not dirty, no need to flush')
 			return 0
 		else:
 			# flush the page to heap file
-			heap_file=HeapFile(self.page_array[pindex].page_schema)  # really need to create a new file?
-			heap_file.write_page(self.page_array[pindex])
+			heap_file=HeapFile(self.page_array[pindex][0][2])  # really need to create a new file?
+			schema_test1=Schema(input_data=[('colname1','CHAR(255)'),('colname2','INT32')],relation_name='test relation')
+			heap_page=HeapPage(schema_test1)
+			heap_page.deserialize(msgpack.packb(self.page_array[pindex]))
+			heap_file.write_page(heap_page)  #
 
 	def delete_tuple(self,tid,tupleID):
 		'''Remove the specified tuple from the buffer pool'''
@@ -60,7 +64,16 @@ class buffer_pool:
 				break
 		if pindex==-1:
 			raise PyDBInternalError("page not found in buffer pool")
-		self.page_array[pindex].delete_tuple(tupleID[1])
+		tuple_id=tupleID[1]
+		if tuple_id>MAX_SLOTS:
+			raise PyDBInternalError("tuple not exist, tuple ID too large")
+		if self.page_array[pindex][1][tuple_id]==None:
+			return 'already empty'
+		else:
+			self.page_array[pindex][1][tuple_id]=None
+			self.page_array[pindex][0][1]-=1
+			self.page_array[pindex][0][3]=True
+			return None
 
 	def insert_tuple(self,tid,table,Tuple):
 		'''Add a tuple to the specified table behalf of transaction tid'''
@@ -69,13 +82,13 @@ class buffer_pool:
 		for i in range(self.num_pages):
 			if self.page_array[i]==None:
 				self.page_array[i]=page
-				self.page_index[i]=page.get_id()
+				self.page_index[i]=page[0][0]
 				flag=1
 				return 0
 		if flag==-1:
 			evict_id=self.evict_pages()
 			self.page_array[evict_id]=page
-			self.page_index[evict_id]=page.get_id()
+			self.page_index[evict_id]=page[0][0]
 			return 0
 
 	def discard_page(self,pid):

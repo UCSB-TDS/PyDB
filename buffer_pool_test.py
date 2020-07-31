@@ -9,19 +9,19 @@ class BufferPoolTest(unittest.TestCase):
         # relation1
         schema_test1=Schema(input_data=[('colname1','CHAR(255)'),('colname2','INT32')],relation_name='test relation1')
         heap_page_test1=HeapPage(schema_test1)
-        heap_page_test1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello world','colname2':1})
-        heap_page_test1.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'hello DBMS','colname2':22})
+        heap_page_test1.insert_tuple(Tuple=[[0,0],SLOT_SIZE,schema_test1.data,'hello world1',1])
+        heap_page_test1.insert_tuple(Tuple=[[0,0],SLOT_SIZE,schema_test1.data,'hello DBMS',22])
         heap_page_test2=HeapPage(schema_test1)
-        heap_page_test2.insert_tuple(Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'another page','colname2':333})
-        table1=HeapFile(schema_test1)
+        heap_page_test2.insert_tuple(Tuple=[[0,0],SLOT_SIZE,schema_test1.data,'hello world2',333])
+        table1=HeapFile(schema_test1.data)
         table1.write_page(heap_page_test1)
         table1.write_page(heap_page_test2)
 
-        buffer_pool_test.insert_tuple(tid=1,table=table1,Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'another page','colname2':333})
-        buffer_pool_test.insert_tuple(tid=1,table=table1,Tuple={'recordID':[0,0],'size':SLOT_SIZE,'colname1':'another page','colname2':333})
-        print(buffer_pool_test.page_array,buffer_pool_test.page_index)
+        buffer_pool_test.insert_tuple(tid=1,table=table1,Tuple=[[0,0],SLOT_SIZE,schema_test1.data,'another page',333])
+        buffer_pool_test.insert_tuple(tid=1,table=table1,Tuple=[[0,0],SLOT_SIZE,schema_test1.data,'another page',4444])
+        print('page objects',buffer_pool_test.page_array,'\npage index',buffer_pool_test.page_index)
         buffer_pool_test.delete_tuple(tid=1,tupleID=[3,0])
-        print(buffer_pool_test.page_index)
+        print('page index:',buffer_pool_test.page_index)
 
 
 if __name__ == '__main__':
