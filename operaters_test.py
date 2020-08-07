@@ -23,7 +23,7 @@ class OperatorTest(unittest.TestCase):
 
         '''test iterator'''
         print('ITERATOR of a heap_file')
-        for value in Iterator(heap_file_test.data).fetch_next():
+        for value in Iterator(heap_file_test2.data).fetch_next():
             print(value)
         print('ITERATOR of a heap_page')
         for value in Iterator(heap_page_test1.data).fetch_next():
@@ -32,6 +32,14 @@ class OperatorTest(unittest.TestCase):
         '''test filter'''
         print('filter =><','colname2','> 333')
         for i in Filter(heap_file_test,'colname2','> 333').do_filter():
+            print(i)
+        print('filter after filter')
+        for i in Filter(heap_file_test,'colname2','> 333',child_op=[Filter,'colname1','like hello',None]).do_filter():
+            print(i)
+
+        print('filter after join')
+        for i in Filter(heap_file_test,'colname2','> 333',child_op=[Join,[heap_file_test,'colname1'],
+                                                    [heap_file_test2,'colname1'],'=',None,None]).do_filter():
             print(i)
         print('filter like str','colname1','like hello')
         for j in Filter(heap_file_test,'colname1','like hello').do_filter():
@@ -48,11 +56,17 @@ class OperatorTest(unittest.TestCase):
 
         '''join'''
         print('join of two tuples from DBIterator')
-        for tuple1 in Filter(heap_file_test,'colname1','like hello').do_filter():
-            if tuple1!=None:
-                for tuple2 in Iterator(heap_file_test2.data).fetch_next():
-                    if tuple2!=None:
-                        print(Join(tuple1,tuple2,'colname1','colname1',op='=').do_join())
+        for tuple1 in Join(heap_file_test,heap_file_test2,'colname1','colname1','=').do_join():
+            print(tuple1)
+        print('join after filter')
+        for tuple1 in Join(heap_file_test,heap_file_test2,'colname1','colname1','=',child_op1=[Filter,'colname1','like hello']).do_join():
+            print(tuple1)
+
+        '''aggregate after join after filter'''
+        print('aggregate after join after filter')
+        print(Aggregate(table=heap_file_test,afield='colname2',gfield='colname1',operand='AVG',
+                        child_op=[Join,[heap_file_test,'colname1'],[heap_file_test2,'colname1'],
+                                  '=',[Filter,'colname1','like hello'],None]).do_calc())
 
 
 if __name__ == '__main__':

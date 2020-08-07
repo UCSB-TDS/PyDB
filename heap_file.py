@@ -42,6 +42,7 @@ def tuple_exam(input_tuple):
     for i in range(len(input_tuple)-3):
         if input_tuple[3+i]!=None:
             if get_type(input_tuple[3+i])!=input_tuple[2][3][i]:
+                print(input_tuple[3+i],get_type(input_tuple[3+i]))
                 raise PyDBInternalError("data in tuple not match with its schema")
 
 class Iterator:
