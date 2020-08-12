@@ -1,4 +1,4 @@
-git+https://github.com/python/mypy.git@master
+mypy
 typed-ast>=1.0.4
 black==19.3b0
 flake8==3.7.8
